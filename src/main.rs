@@ -2,6 +2,7 @@ mod vec3;
 mod ray;
 mod hittable;
 mod sphere;
+mod camera;
 
 use std::io::{self, Write};
 use vec3::{Vec3,Color,Point3};
@@ -10,7 +11,16 @@ use std::f64::INFINITY;
 use std::f64::consts::PI;
 use hittable::{Hittable,HitList};
 use sphere::Sphere;
+use camera::Camera;
+use rand::prelude::*;
 
+fn random_double() -> f64 {
+  rand::thread_rng().gen()
+}
+
+fn random_double_in_range(min: f64, max: f64) -> f64 {
+  min + (max-min) * random_double()
+}
 
 fn degrees_to_radians(deg: f64) -> f64 {
   deg * PI / 180.0
@@ -49,14 +59,7 @@ fn main() -> io::Result<()> {
   let height: usize = (width as f64 / aspect_ratio) as usize;
 
   // Camera
-  let viewport_height = 2.0;
-  let viewport_width = aspect_ratio * viewport_height;
-  let focal_length = 1.0;
-
-  let origin = Point3::from(0.0, 0.0, 0.0);
-  let horizontal = Vec3::from(viewport_width, 0.0, 0.0);
-  let vertical = Vec3::from(0.0, viewport_height, 0.0);
-  let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::from(0.0, 0.0, focal_length);
+  let camera = Camera::new(aspect_ratio);
 
   // render
   let stdout = io::stdout();
@@ -91,7 +94,7 @@ fn main() -> io::Result<()> {
     for i in 0..width {
       let u = i as f64 / (width-1) as f64;
       let v = j as f64 / (height-1) as f64;
-      let ray = Ray { origin, direction: lower_left_corner + horizontal * u + vertical * v - origin };
+      let ray = camera.get_ray(u, v);
       write_color(ray_color(&ray, &hit_list), &stdout)?;
     }
   }
