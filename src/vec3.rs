@@ -1,5 +1,6 @@
 use std::ops::{Sub,Add,Mul,Div};
 use std::io::{self, Write};
+use rand::prelude::ThreadRng;
 use crate::random::{random_double,random_double_in_range};
 
 #[derive(Debug,PartialEq,Default,Clone,Copy)]
@@ -92,33 +93,33 @@ impl Div<f64> for Vec3 {
 }
 
 impl Vec3 {
-  pub fn random() -> Vec3 {
-    Vec3::from(random_double(), random_double(), random_double())
+  pub fn random(rng: &mut ThreadRng) -> Vec3 {
+    Vec3::from(random_double(rng), random_double(rng), random_double(rng))
   }
 
-  pub fn random_range(min: f64, max: f64) -> Vec3 {
+  pub fn random_range(min: f64, max: f64, rng: &mut ThreadRng) -> Vec3 {
     Vec3::from(
-      random_double_in_range(min, max),
-      random_double_in_range(min, max),
-      random_double_in_range(min, max),
+      random_double_in_range(min, max, rng),
+      random_double_in_range(min, max, rng),
+      random_double_in_range(min, max, rng),
     )
   }
 
-  pub fn random_in_unit_sphere() -> Vec3 {
+  pub fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
     loop {
-      let p = Vec3::random_range(-1.0, 1.0);
+      let p = Vec3::random_range(-1.0, 1.0, rng);
       if p.len_squared() < 1.0 {
         return p;
       }
     }
   }
 
-  pub fn random_unit_vector() -> Vec3 {
-    Vec3::random_in_unit_sphere().unit_vector()
+  pub fn random_unit_vector(rng: &mut ThreadRng) -> Vec3 {
+    Vec3::random_in_unit_sphere(rng).unit_vector()
   }
 
-  pub fn random_in_hemisphere(normal: &Vec3) -> Vec3 {
-    let in_unit_sphere = Vec3::random_in_unit_sphere();
+  pub fn random_in_hemisphere(normal: &Vec3, rng: &mut ThreadRng) -> Vec3 {
+    let in_unit_sphere = Vec3::random_in_unit_sphere(rng);
     if in_unit_sphere.dot(normal) > 0.0 {
       return in_unit_sphere;
     }

@@ -14,10 +14,9 @@ use hittable::{Hittable,HitList};
 use sphere::Sphere;
 use camera::Camera;
 use random::random_double;
+use rand::prelude::*;
+use rayon::prelude::*;
 
-fn random_double_in_range(min: f64, max: f64) -> f64 {
-  min + (max-min) * random_double()
-}
 
 fn degrees_to_radians(deg: f64) -> f64 {
   deg * PI / 180.0
@@ -33,16 +32,16 @@ fn clamp(value: f64, min_value: f64, max_value: f64) -> f64 {
   value
 }
 
-fn ray_color(ray: &Ray, hit_list: &HitList, depth: isize) -> Color {
+fn ray_color(ray: &Ray, hit_list: &HitList, depth: isize, rng: &mut ThreadRng) -> Color {
   if depth <= 0 {
     return Color::from(0.0, 0.0, 0.0);
   }
 
   match hit_list.hit(ray, 0.001, INFINITY) {
     Some(hit) => {
-      let target = hit.normal + Vec3::random_in_hemisphere(&hit.normal);
+      let target = hit.normal + Vec3::random_in_hemisphere(&hit.normal, rng);
       let new_ray = Ray { origin: hit.p, direction: target - hit.p };
-      ray_color(&new_ray, &hit_list, depth - 1) * 0.5
+      ray_color(&new_ray, &hit_list, depth - 1, rng) * 0.5
     },
     None => {
       let unit_dir = ray.direction.unit_vector();
@@ -71,6 +70,7 @@ fn write_color(stdout: &std::io::Stdout, color: Color, samples_per_pixel: usize)
 }
 
 fn main() -> io::Result<()> {
+  let mut rng = rand::thread_rng();
 
   // image
   let aspect_ratio: f64 = 16.0 / 9.0;
@@ -114,12 +114,14 @@ fn main() -> io::Result<()> {
 
     for i in 0..width {
 
-      let pixel_color = (0..samples_per_pixel).fold(Color::from(0.0,0.0, 0.0), |color, _| {
-        let u = (i as f64 + random_double()) / (width-1) as f64;
-        let v = (j as f64 + random_double()) / (height-1) as f64;
+      let mut pixel_color = Color::from(0.0, 0.0, 0.0);
+
+      for _ in 0..samples_per_pixel {
+        let u = (i as f64 + random_double(&mut rng)) / (width-1) as f64;
+        let v = (j as f64 + random_double(&mut rng)) / (height-1) as f64;
         let ray = camera.get_ray(u, v);
-        color + ray_color(&ray, &hit_list, max_depth)
-      });
+        pixel_color = pixel_color + ray_color(&ray, &hit_list, max_depth, &mut rng);
+      }
 
       write_color(&stdout, pixel_color, samples_per_pixel)?;
     }
