@@ -3,6 +3,7 @@ mod ray;
 mod hittable;
 mod sphere;
 mod camera;
+mod random;
 
 use std::io::{self, Write};
 use vec3::{Vec3,Color,Point3};
@@ -12,11 +13,7 @@ use std::f64::consts::PI;
 use hittable::{Hittable,HitList};
 use sphere::Sphere;
 use camera::Camera;
-use rand::prelude::*;
-
-fn random_double() -> f64 {
-  rand::thread_rng().gen()
-}
+use random::random_double;
 
 fn random_double_in_range(min: f64, max: f64) -> f64 {
   min + (max-min) * random_double()
@@ -36,10 +33,16 @@ fn clamp(value: f64, min_value: f64, max_value: f64) -> f64 {
   value
 }
 
-fn ray_color(ray: &Ray, hit_list: &HitList) -> Color {
-  match hit_list.hit(ray, 0.0, INFINITY) {
+fn ray_color(ray: &Ray, hit_list: &HitList, depth: isize) -> Color {
+  if depth <= 0 {
+    return Color::from(0.0, 0.0, 0.0);
+  }
+
+  match hit_list.hit(ray, 0.001, INFINITY) {
     Some(hit) => {
-      (hit.normal + 1.0) * 0.5
+      let target = hit.normal + Vec3::random_in_hemisphere(&hit.normal);
+      let new_ray = Ray { origin: hit.p, direction: target - hit.p };
+      ray_color(&new_ray, &hit_list, depth - 1) * 0.5
     },
     None => {
       let unit_dir = ray.direction.unit_vector();
@@ -54,9 +57,9 @@ fn write_color(stdout: &std::io::Stdout, color: Color, samples_per_pixel: usize)
 
   let scale = 1.0 / samples_per_pixel as f64;
 
-  let r = color.x * scale;
-  let g = color.y * scale;
-  let b = color.z * scale;
+  let r = (color.x * scale).sqrt();
+  let g = (color.y * scale).sqrt();
+  let b = (color.z * scale).sqrt();
 
   let ir: usize = (256.0 * clamp(r, 0.0, 0.999)).floor() as usize;
   let ig: usize = (256.0 * clamp(g, 0.0, 0.999)).floor() as usize;
@@ -74,6 +77,7 @@ fn main() -> io::Result<()> {
   let width: usize = 400;
   let height: usize = (width as f64 / aspect_ratio) as usize;
   let samples_per_pixel = 100;
+  let max_depth = 50;
 
   // Camera
   let camera = Camera::new(aspect_ratio);
@@ -114,7 +118,7 @@ fn main() -> io::Result<()> {
         let u = (i as f64 + random_double()) / (width-1) as f64;
         let v = (j as f64 + random_double()) / (height-1) as f64;
         let ray = camera.get_ray(u, v);
-        color + ray_color(&ray, &hit_list)
+        color + ray_color(&ray, &hit_list, max_depth)
       });
 
       write_color(&stdout, pixel_color, samples_per_pixel)?;

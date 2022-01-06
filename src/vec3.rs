@@ -1,5 +1,6 @@
 use std::ops::{Sub,Add,Mul,Div};
 use std::io::{self, Write};
+use crate::random::{random_double,random_double_in_range};
 
 #[derive(Debug,PartialEq,Default,Clone,Copy)]
 pub struct Vec3 {
@@ -91,6 +92,40 @@ impl Div<f64> for Vec3 {
 }
 
 impl Vec3 {
+  pub fn random() -> Vec3 {
+    Vec3::from(random_double(), random_double(), random_double())
+  }
+
+  pub fn random_range(min: f64, max: f64) -> Vec3 {
+    Vec3::from(
+      random_double_in_range(min, max),
+      random_double_in_range(min, max),
+      random_double_in_range(min, max),
+    )
+  }
+
+  pub fn random_in_unit_sphere() -> Vec3 {
+    loop {
+      let p = Vec3::random_range(-1.0, 1.0);
+      if p.len_squared() < 1.0 {
+        return p;
+      }
+    }
+  }
+
+  pub fn random_unit_vector() -> Vec3 {
+    Vec3::random_in_unit_sphere().unit_vector()
+  }
+
+  pub fn random_in_hemisphere(normal: &Vec3) -> Vec3 {
+    let in_unit_sphere = Vec3::random_in_unit_sphere();
+    if in_unit_sphere.dot(normal) > 0.0 {
+      return in_unit_sphere;
+    }
+
+    in_unit_sphere * -1.0
+  }
+
   pub fn from(x: f64, y: f64, z: f64) -> Vec3 {
     Vec3 { x, y, z }
   }
@@ -103,7 +138,7 @@ impl Vec3 {
     self.len_squared().sqrt()
   }
 
-  pub fn dot(self, other: Vec3) -> f64 {
+  pub fn dot(self, other: &Vec3) -> f64 {
     self.x * other.x + self.y * other.y + self.z * other.z
   }
 
