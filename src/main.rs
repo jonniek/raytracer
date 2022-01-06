@@ -26,6 +26,16 @@ fn degrees_to_radians(deg: f64) -> f64 {
   deg * PI / 180.0
 }
 
+fn clamp(value: f64, min_value: f64, max_value: f64) -> f64 {
+  if value < min_value {
+    return min_value;
+  }
+  if value > max_value {
+    return max_value;
+  }
+  value
+}
+
 fn ray_color(ray: &Ray, hit_list: &HitList) -> Color {
   match hit_list.hit(ray, 0.0, INFINITY) {
     Some(hit) => {
@@ -39,12 +49,18 @@ fn ray_color(ray: &Ray, hit_list: &HitList) -> Color {
   }
 }
 
-fn write_color(color: Color, stdout: &std::io::Stdout) -> io::Result<()> {
+fn write_color(stdout: &std::io::Stdout, color: Color, samples_per_pixel: usize) -> io::Result<()> {
   let mut handle = stdout.lock();
 
-  let ir: usize = (255.999 * color.x).floor() as usize;
-  let ig: usize = (255.999 * color.y).floor() as usize;
-  let ib: usize = (255.999 * color.z).floor() as usize;
+  let scale = 1.0 / samples_per_pixel as f64;
+
+  let r = color.x * scale;
+  let g = color.y * scale;
+  let b = color.z * scale;
+
+  let ir: usize = (256.0 * clamp(r, 0.0, 0.999)).floor() as usize;
+  let ig: usize = (256.0 * clamp(g, 0.0, 0.999)).floor() as usize;
+  let ib: usize = (256.0 * clamp(b, 0.0, 0.999)).floor() as usize;
 
   handle.write(format!("{} {} {}\n", ir, ig, ib).as_bytes())?;
 
@@ -57,6 +73,7 @@ fn main() -> io::Result<()> {
   let aspect_ratio: f64 = 16.0 / 9.0;
   let width: usize = 400;
   let height: usize = (width as f64 / aspect_ratio) as usize;
+  let samples_per_pixel = 100;
 
   // Camera
   let camera = Camera::new(aspect_ratio);
@@ -92,10 +109,15 @@ fn main() -> io::Result<()> {
     stderr_handle.flush()?;
 
     for i in 0..width {
-      let u = i as f64 / (width-1) as f64;
-      let v = j as f64 / (height-1) as f64;
-      let ray = camera.get_ray(u, v);
-      write_color(ray_color(&ray, &hit_list), &stdout)?;
+
+      let pixel_color = (0..samples_per_pixel).fold(Color::from(0.0,0.0, 0.0), |color, _| {
+        let u = (i as f64 + random_double()) / (width-1) as f64;
+        let v = (j as f64 + random_double()) / (height-1) as f64;
+        let ray = camera.get_ray(u, v);
+        color + ray_color(&ray, &hit_list)
+      });
+
+      write_color(&stdout, pixel_color, samples_per_pixel)?;
     }
   }
 
