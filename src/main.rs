@@ -69,31 +69,43 @@ fn write_color(stdout: &std::io::Stdout, color: Color, samples_per_pixel: usize)
   Ok(())
 }
 
+
+
+fn render(
+  camera: &Camera,
+  world: &HitList,
+  image_width: usize,
+  image_height: usize,
+  samples: usize,
+  max_depth: isize,
+) -> Vec<Color> {
+
+  let colors: Vec<Color> = (0..image_height * image_width)
+    .into_par_iter()
+    .map(|index| {
+      let mut rng = rand::thread_rng();
+      let x = index % image_width;
+      let y = index / image_width;
+
+      let mut pixel_color = Color::from(0.0, 0.0, 0.0);
+      for _ in 0..samples {
+        let u = (x as f64 + random_double(&mut rng)) / (image_width-1) as f64;
+        let v = (y as f64 + random_double(&mut rng)) / (image_height-1) as f64;
+        let ray = camera.get_ray(u, v);
+        pixel_color = pixel_color + ray_color(&ray, &world, max_depth, &mut rng);
+      }
+
+      pixel_color
+    })
+    .rev()
+    .collect();
+
+  colors
+}
+
 fn main() -> io::Result<()> {
-  let mut rng = rand::thread_rng();
-
-  // image
-  let aspect_ratio: f64 = 16.0 / 9.0;
-  let width: usize = 400;
-  let height: usize = (width as f64 / aspect_ratio) as usize;
-  let samples_per_pixel = 100;
-  let max_depth = 50;
-
-  // Camera
-  let camera = Camera::new(aspect_ratio);
-
-  // render
-  let stdout = io::stdout();
-  let stderr = io::stderr();
-  let mut stderr_handle = stderr.lock();
-
-  {
-    let mut handle = stdout.lock();
-    let headers = format!("P3\n{} {}\n255\n", width, height);
-    handle.write(headers.as_bytes())?;
-  }
-
-  let hit_list = HitList {
+  // world objects
+  let world = HitList {
     objects: vec!(
       Sphere {
         radius: 0.5,
@@ -106,25 +118,26 @@ fn main() -> io::Result<()> {
     )
   };
 
+  // image params
+  let aspect_ratio: f64 = 16.0 / 9.0;
+  let width: usize = 400;
+  let height: usize = (width as f64 / aspect_ratio) as usize;
+  let samples_per_pixel = 100;
+  let max_depth = 50;
 
-  for j in (0..height).rev() {
+  // Camera
+  let camera = Camera::new(aspect_ratio);
 
-    stderr_handle.write(format!("Scanlines remaining: {}\n", j).as_bytes())?;
-    stderr_handle.flush()?;
-
-    for i in 0..width {
-
-      let mut pixel_color = Color::from(0.0, 0.0, 0.0);
-
-      for _ in 0..samples_per_pixel {
-        let u = (i as f64 + random_double(&mut rng)) / (width-1) as f64;
-        let v = (j as f64 + random_double(&mut rng)) / (height-1) as f64;
-        let ray = camera.get_ray(u, v);
-        pixel_color = pixel_color + ray_color(&ray, &hit_list, max_depth, &mut rng);
-      }
-
-      write_color(&stdout, pixel_color, samples_per_pixel)?;
-    }
+  // render
+  let stdout = io::stdout();
+  {
+    let mut handle = stdout.lock();
+    let headers = format!("P3\n{} {}\n255\n", width, height);
+    handle.write(headers.as_bytes())?;
+  }
+  let colors = render(&camera, &world, width, height, samples_per_pixel, max_depth);
+  for color in colors {
+    write_color(&stdout, color, samples_per_pixel)?;
   }
 
   Ok(())
