@@ -1,11 +1,13 @@
 use crate::ray::Ray;
 use crate::vec3::{Point3};
 use crate::hittable::{Hittable,HitRecord};
+use crate::material::{Material};
 
-#[derive(Default,Debug,Clone,Copy)]
+#[derive(Debug,Clone)]
 pub struct Sphere {
   pub center: Point3,
   pub radius: f64,
+  pub material: Material,
 }
 
 impl Hittable for Sphere {
@@ -43,6 +45,7 @@ impl Hittable for Sphere {
         true => outward_normal,
         false => outward_normal * -1.0,
       },
+      material: &self.material
     })
   }
 }
@@ -50,6 +53,18 @@ impl Hittable for Sphere {
 
 #[test]
 fn test_sphere_hit() {
-  let result = Sphere::default().hit(&Ray::default(), 0.0, 2.0);
+  use crate::vec3::{Vec3,Point3,Color};
+  use crate::material::{Material, Metal};
+
+  let sphere = Sphere {
+    radius: 5.0,
+    center: Point3::from(0.0, 0.0, 0.0),
+    material: Material::Metal(Metal{ albedo: Color::default(), fuzz: 0.5 }),
+  };
+
+  let result = sphere.hit(&Ray {
+    origin: Point3 { x: 0.0, y: 0.0, z: 10.0 },
+    direction: Vec3 { x: 0.0, y: 0.0, z: 1.0 },
+  }, 0.0, 20.0);
   assert_eq!(result.is_none(), true);
 }

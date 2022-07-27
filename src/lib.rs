@@ -4,4 +4,5 @@ pub mod sphere;
 pub mod hittable;
 pub mod camera;
 pub mod random;
+pub mod material;
 

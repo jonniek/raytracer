@@ -4,9 +4,10 @@ mod hittable;
 mod sphere;
 mod camera;
 mod random;
+mod material;
 
 use std::io::{self, Write};
-use vec3::{Vec3,Color,Point3};
+use vec3::{Color,Point3};
 use ray::Ray;
 use std::f64::INFINITY;
 use std::f64::consts::PI;
@@ -14,10 +15,11 @@ use hittable::{Hittable,HitList};
 use sphere::Sphere;
 use camera::Camera;
 use random::random_double;
-use rand::prelude::*;
 use rayon::prelude::*;
+use material::{Scatterable,Material,Lambertian,Metal};
 
 
+#[allow(dead_code)]
 fn degrees_to_radians(deg: f64) -> f64 {
   deg * PI / 180.0
 }
@@ -32,16 +34,26 @@ fn clamp(value: f64, min_value: f64, max_value: f64) -> f64 {
   value
 }
 
-fn ray_color(ray: &Ray, hit_list: &HitList, depth: isize, rng: &mut ThreadRng) -> Color {
+fn ray_color(ray: &Ray, hit_list: &HitList, depth: isize) -> Color {
   if depth <= 0 {
     return Color::from(0.0, 0.0, 0.0);
   }
 
   match hit_list.hit(ray, 0.001, INFINITY) {
     Some(hit) => {
-      let target = hit.normal + Vec3::random_in_hemisphere(&hit.normal, rng);
-      let new_ray = Ray { origin: hit.p, direction: target - hit.p };
-      ray_color(&new_ray, &hit_list, depth - 1, rng) * 0.5
+
+      match hit.material.scatter(ray, &hit) {
+        Some((scattered_ray_option, albedo)) => {
+          match scattered_ray_option {
+            Some(scattered_ray) => {
+              return albedo * ray_color(&scattered_ray, hit_list, depth - 1)
+            },
+            None => return albedo
+          }
+        },
+        None => (),
+      }
+      return Color::from(0.0, 0.0, 0.0);
     },
     None => {
       let unit_dir = ray.direction.unit_vector();
@@ -70,7 +82,6 @@ fn write_color(stdout: &std::io::Stdout, color: Color, samples_per_pixel: usize)
 }
 
 
-
 fn render(
   camera: &Camera,
   world: &HitList,
@@ -83,16 +94,15 @@ fn render(
   let colors: Vec<Color> = (0..image_height * image_width)
     .into_par_iter()
     .map(|index| {
-      let mut rng = rand::thread_rng();
       let x = index % image_width;
       let y = index / image_width;
 
       let mut pixel_color = Color::from(0.0, 0.0, 0.0);
       for _ in 0..samples {
-        let u = (x as f64 + random_double(&mut rng)) / (image_width-1) as f64;
-        let v = (y as f64 + random_double(&mut rng)) / (image_height-1) as f64;
+        let u = (x as f64 + random_double()) / (image_width-1) as f64;
+        let v = (y as f64 + random_double()) / (image_height-1) as f64;
         let ray = camera.get_ray(u, v);
-        pixel_color = pixel_color + ray_color(&ray, &world, max_depth, &mut rng);
+        pixel_color = pixel_color + ray_color(&ray, &world, max_depth);
       }
 
       pixel_color
@@ -109,11 +119,23 @@ fn main() -> io::Result<()> {
     objects: vec!(
       Sphere {
         radius: 0.5,
-        center: Point3::from(0.0, 0.0, -1.0)
+        center: Point3::from(0.0, 0.0, -1.0),
+        material: Material::Lambertian(Lambertian{ albedo: Color::from(0.7, 0.3, 0.3) }),
+      },
+      Sphere {
+        radius: 0.5,
+        center: Point3::from(-1.0, 0.0, -1.0),
+        material: Material::Metal(Metal{ albedo: Color::from(0.8, 0.8, 0.8), fuzz: 0.3 }),
+      },
+      Sphere {
+        radius: 0.5,
+        center: Point3::from(1.0, 0.0, -1.0),
+        material: Material::Metal(Metal{ albedo: Color::from(0.8, 0.6, 0.2), fuzz: 1.0 }),
       },
       Sphere {
         radius: 100.0,
-        center: Point3::from(0.0,-100.5,-1.0)
+        center: Point3::from(0.0,-100.5,-1.0),
+        material: Material::Lambertian(Lambertian{ albedo: Color::from(0.8, 0.8, 0.0) }),
       }
     )
   };

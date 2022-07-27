@@ -1,6 +1,5 @@
 use std::ops::{Sub,Add,Mul,Div};
 use std::io::{self, Write};
-use rand::prelude::ThreadRng;
 use crate::random::{random_double,random_double_in_range};
 
 #[derive(Debug,PartialEq,Default,Clone,Copy)]
@@ -9,8 +8,6 @@ pub struct Vec3 {
   pub y: f64,
   pub z: f64,
 }
-
-
 
 pub type Color = Vec3;
 pub type Point3 = Vec3;
@@ -92,34 +89,40 @@ impl Div<f64> for Vec3 {
   }
 }
 
+#[allow(dead_code)]
 impl Vec3 {
-  pub fn random(rng: &mut ThreadRng) -> Vec3 {
-    Vec3::from(random_double(rng), random_double(rng), random_double(rng))
+  pub fn random() -> Vec3 {
+    Vec3::from(random_double(), random_double(), random_double())
   }
 
-  pub fn random_range(min: f64, max: f64, rng: &mut ThreadRng) -> Vec3 {
+  pub fn near_zero(self) -> bool {
+    let limit: f64 = 1e-8;
+    self.x.abs() < limit && self.y.abs() < limit && self.z.abs() < limit
+  }
+
+  fn random_range(min: f64, max: f64) -> Vec3 {
     Vec3::from(
-      random_double_in_range(min, max, rng),
-      random_double_in_range(min, max, rng),
-      random_double_in_range(min, max, rng),
+      random_double_in_range(min, max),
+      random_double_in_range(min, max),
+      random_double_in_range(min, max),
     )
   }
 
-  pub fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
+  pub fn random_in_unit_sphere() -> Vec3 {
     loop {
-      let p = Vec3::random_range(-1.0, 1.0, rng);
+      let p = Vec3::random_range(-1.0, 1.0);
       if p.len_squared() < 1.0 {
         return p;
       }
     }
   }
 
-  pub fn random_unit_vector(rng: &mut ThreadRng) -> Vec3 {
-    Vec3::random_in_unit_sphere(rng).unit_vector()
+  pub fn random_unit_vector() -> Vec3 {
+    Vec3::random_in_unit_sphere().unit_vector()
   }
 
-  pub fn random_in_hemisphere(normal: &Vec3, rng: &mut ThreadRng) -> Vec3 {
-    let in_unit_sphere = Vec3::random_in_unit_sphere(rng);
+  pub fn random_in_hemisphere(normal: &Vec3) -> Vec3 {
+    let in_unit_sphere = Vec3::random_in_unit_sphere();
     if in_unit_sphere.dot(normal) > 0.0 {
       return in_unit_sphere;
     }
@@ -171,15 +174,21 @@ fn test_default() {
 }
 
 #[test]
-fn test_len_squared() {
+fn test_len() {
   let v =  Vec3 { x: 2.0, y: 2.0, z: 1.0 };
   assert_eq!(v.len(), 3.0);
 }
 
 #[test]
-fn test_len() {
+fn test_near_zero() {
+  let v = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+  assert_eq!(v.near_zero(), true);
+}
+
+#[test]
+fn test_len_squared() {
   let v = Vec3 { x: 3.0, y: 3.0, z: 3.0 };
-  assert_eq!(v.len_squared(), 22.0);
+  assert_eq!(v.len_squared(), 27.0);
 }
 
 #[test]
