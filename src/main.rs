@@ -16,7 +16,7 @@ use sphere::Sphere;
 use camera::Camera;
 use random::random_double;
 use rayon::prelude::*;
-use material::{Scatterable,Material,Lambertian,Metal};
+use material::{Scatterable,Material,Lambertian,Metal,Glass};
 
 
 #[allow(dead_code)]
@@ -120,12 +120,12 @@ fn main() -> io::Result<()> {
       Sphere {
         radius: 0.5,
         center: Point3::from(0.0, 0.0, -1.0),
-        material: Material::Lambertian(Lambertian{ albedo: Color::from(0.7, 0.3, 0.3) }),
+        material: Material::Lambertian(Lambertian{ albedo: Color::from(0.1, 0.2, 0.5) }),
       },
       Sphere {
-        radius: 0.5,
+        radius: -0.4,
         center: Point3::from(-1.0, 0.0, -1.0),
-        material: Material::Metal(Metal{ albedo: Color::from(0.8, 0.8, 0.8), fuzz: 0.3 }),
+        material: Material::Glass(Glass{ refraction_index: 1.5 }),
       },
       Sphere {
         radius: 0.5,
