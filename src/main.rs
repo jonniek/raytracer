@@ -7,22 +7,15 @@ mod random;
 mod material;
 
 use std::io::{self, Write};
-use vec3::{Color,Point3};
+use vec3::{Color,Point3,Vec3};
 use ray::Ray;
 use std::f64::INFINITY;
-use std::f64::consts::PI;
 use hittable::{Hittable,HitList};
 use sphere::Sphere;
 use camera::Camera;
 use random::random_double;
 use rayon::prelude::*;
 use material::{Scatterable,Material,Lambertian,Metal,Glass};
-
-
-#[allow(dead_code)]
-fn degrees_to_radians(deg: f64) -> f64 {
-  deg * PI / 180.0
-}
 
 fn clamp(value: f64, min_value: f64, max_value: f64) -> f64 {
   if value < min_value {
@@ -115,6 +108,7 @@ fn render(
 
 fn main() -> io::Result<()> {
   // world objects
+
   let world = HitList {
     objects: vec!(
       Sphere {
@@ -130,7 +124,7 @@ fn main() -> io::Result<()> {
       Sphere {
         radius: 0.5,
         center: Point3::from(1.0, 0.0, -1.0),
-        material: Material::Metal(Metal{ albedo: Color::from(0.8, 0.6, 0.2), fuzz: 1.0 }),
+        material: Material::Metal(Metal{ albedo: Color::from(0.8, 0.6, 0.2), fuzz: 0.0 }),
       },
       Sphere {
         radius: 100.0,
@@ -142,13 +136,20 @@ fn main() -> io::Result<()> {
 
   // image params
   let aspect_ratio: f64 = 16.0 / 9.0;
+  let vertical_field_of_view = 20.0;
   let width: usize = 400;
   let height: usize = (width as f64 / aspect_ratio) as usize;
   let samples_per_pixel = 100;
   let max_depth = 50;
 
   // Camera
-  let camera = Camera::new(aspect_ratio);
+  let camera = Camera::new(
+    aspect_ratio,
+    vertical_field_of_view,
+    Point3::from(-2.0, 2.0, 1.0),
+    Point3::from(0.0,0.0,-1.0),
+    Vec3::from(0.0,1.0,0.0)
+  );
 
   // render
   let stdout = io::stdout();

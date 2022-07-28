@@ -1,5 +1,10 @@
 use crate::vec3::{Point3,Vec3};
 use crate::ray::Ray;
+use std::f64::consts::PI;
+
+fn degrees_to_radians(deg: f64) -> f64 {
+  deg * PI / 180.0
+}
 
 pub struct Camera {
   pub aspect_ratio: f64,
@@ -14,32 +19,44 @@ pub struct Camera {
 }
 
 impl Camera {
-  pub fn new(aspect_ratio: f64) -> Camera {
-    let viewport_height = 2.0;
+  pub fn new(
+    aspect_ratio: f64,
+    vfov: f64,
+    lookfrom: Point3,
+    lookat: Point3,
+    vup: Vec3,
+  ) -> Camera {
+    let theta = degrees_to_radians(vfov);
+    let h = (theta / 2.0).tan();
+    let viewport_height = 2.0 * h;
     let viewport_width = aspect_ratio * viewport_height;
     let focal_length = 1.0;
 
-    let origin = Point3::from(0.0, 0.0, 0.0);
-    let horizontal = Vec3::from(viewport_width, 0.0, 0.0);
-    let vertical = Vec3::from(0.0, viewport_height, 0.0);
+    let w = (lookfrom - lookat).unit_vector();
+    let u = vup.cross(w).unit_vector();
+    let v = w.cross(u);
+
+    let origin = lookfrom;
+    let horizontal = u * viewport_width;
+    let vertical = v * viewport_height;
 
     Camera {
       aspect_ratio,
       viewport_height,
       viewport_width,
-      focal_length: 1.0,
+      focal_length,
 
       origin,
-      horizontal: Vec3::from(viewport_width, 0.0, 0.0),
-      vertical: Vec3::from(0.0, viewport_height, 0.0),
-      lower_left_corner: origin - horizontal / 2.0 - vertical / 2.0 - Vec3::from(0.0, 0.0, focal_length),
+      horizontal,
+      vertical,
+      lower_left_corner: origin - horizontal / 2.0 - vertical / 2.0 - w,
     }
   }
 
-  pub fn get_ray(&self, u: f64, v: f64) -> Ray {
+  pub fn get_ray(&self, s: f64, t: f64) -> Ray {
     Ray {
       origin: self.origin,
-      direction: self.lower_left_corner + self.horizontal * u + self.vertical * v - self.origin
+      direction: self.lower_left_corner + self.horizontal * s + self.vertical * t - self.origin
     }
   }
 }
