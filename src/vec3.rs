@@ -130,6 +130,20 @@ impl Vec3 {
     in_unit_sphere * -1.0
   }
 
+  pub fn random_in_unit_disk() -> Vec3 {
+    loop {
+      let p = Vec3::from(
+        random_double_in_range(-1.0,1.0),
+        random_double_in_range(-1.0,1.0),
+        0.0
+      );
+      if p.len_squared() >= 1.0 {
+        continue;
+      }
+      return p;
+    }
+  }
+
   pub fn from(x: f64, y: f64, z: f64) -> Vec3 {
     Vec3 { x, y, z }
   }

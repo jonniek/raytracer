@@ -135,8 +135,13 @@ fn main() -> io::Result<()> {
   };
 
   // image params
+  let lookfrom = Point3::from(-2.0, 2.0, 1.0);
+  let lookat = Point3::from(0.0,0.0,-1.0);
+  let vup = Vec3::from(0.0,1.0,0.0);
   let aspect_ratio: f64 = 16.0 / 9.0;
   let vertical_field_of_view = 20.0;
+  let aperture = 2.0;
+  let focus_distance = (lookfrom-lookat).len();
   let width: usize = 400;
   let height: usize = (width as f64 / aspect_ratio) as usize;
   let samples_per_pixel = 100;
@@ -146,9 +151,11 @@ fn main() -> io::Result<()> {
   let camera = Camera::new(
     aspect_ratio,
     vertical_field_of_view,
-    Point3::from(-2.0, 2.0, 1.0),
-    Point3::from(0.0,0.0,-1.0),
-    Vec3::from(0.0,1.0,0.0)
+    aperture,
+    focus_distance,
+    lookfrom,
+    lookat,
+    vup,
   );
 
   // render
