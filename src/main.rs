@@ -109,42 +109,65 @@ fn render(
 fn main() -> io::Result<()> {
   // world objects
 
-  let world = HitList {
+  let mut world: HitList = HitList {
     objects: vec!(
       Sphere {
-        radius: 0.5,
-        center: Point3::from(0.0, 0.0, -1.0),
-        material: Material::Lambertian(Lambertian{ albedo: Color::from(0.1, 0.2, 0.5) }),
+        radius: 1.0,
+        center: Point3::from(-4.0, 1.0, 0.0),
+        material: Material::Lambertian(Lambertian{ albedo: Color::from(0.4, 0.2, 0.1) }),
       },
       Sphere {
-        radius: -0.4,
-        center: Point3::from(-1.0, 0.0, -1.0),
+        radius: 1.0,
+        center: Point3::from(0.0, 1.0, 0.0),
         material: Material::Glass(Glass{ refraction_index: 1.5 }),
       },
       Sphere {
-        radius: 0.5,
-        center: Point3::from(1.0, 0.0, -1.0),
-        material: Material::Metal(Metal{ albedo: Color::from(0.8, 0.6, 0.2), fuzz: 0.0 }),
+        radius: 1.0,
+        center: Point3::from(4.0, 1.0, 0.0),
+        material: Material::Metal(Metal{ albedo: Color::from(0.7, 0.6, 0.5), fuzz: 0.0 }),
       },
       Sphere {
         radius: 100.0,
-        center: Point3::from(0.0,-100.5,-1.0),
-        material: Material::Lambertian(Lambertian{ albedo: Color::from(0.8, 0.8, 0.0) }),
+        center: Point3::from(0.0,-100.0,-1.0),
+        material: Material::Lambertian(Lambertian{ albedo: Color::from(0.5, 0.5, 0.5) }),
       }
     )
   };
 
+  for a in -11..11 {
+    for b in -11..11 {
+      let center = Point3::from(a as f64 + 0.9 * random_double(), 0.2, b as f64 + 0.9 * random_double());
+      let material = match random_double() {
+        n if n > 0.6 => Material::Lambertian(
+          Lambertian{ albedo: Color::from(random_double(), random_double(), random_double()) }
+        ),
+        n if n > 0.2 => Material::Metal(
+          Metal{ albedo: Color::from(random_double(), random_double(), random_double()), fuzz: random_double() }
+        ),
+        _ => Material::Glass(Glass{ refraction_index: 1.0 + random_double() }),
+      };
+
+        let sphere = Sphere {
+          radius: random_double() * 0.4,
+          center,
+          material,
+        };
+        world.objects.push(sphere)
+    }
+  }
+
+
   // image params
-  let lookfrom = Point3::from(-2.0, 2.0, 1.0);
-  let lookat = Point3::from(0.0,0.0,-1.0);
+  let lookfrom = Point3::from(13.0, 2.0, 3.0);
+  let lookat = Point3::from(0.0,0.0,0.0);
   let vup = Vec3::from(0.0,1.0,0.0);
-  let aspect_ratio: f64 = 16.0 / 9.0;
+  let aspect_ratio: f64 = 3.0 / 2.0;
   let vertical_field_of_view = 20.0;
-  let aperture = 2.0;
-  let focus_distance = (lookfrom-lookat).len();
-  let width: usize = 400;
+  let aperture = 0.1;
+  let focus_distance = 10.0;
+  let width: usize = 1200;
   let height: usize = (width as f64 / aspect_ratio) as usize;
-  let samples_per_pixel = 100;
+  let samples_per_pixel = 500;
   let max_depth = 50;
 
   // Camera
